@@ -23,14 +23,14 @@ func main() {
 			continue
 		}
 		go handleConnection(conn)
-		defer conn.Close()
 	}
+
 }
 
 func handleConnection(conn net.Conn) {
-
+	defer conn.Close()
+	data := make([]byte, 1024)
 	for {
-		data := make([]byte, 1024)
 		_, err := conn.Read(data)
 		if err != nil {
 			fmt.Println("Error reading data from connection: ", err.Error())
