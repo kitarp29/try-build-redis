@@ -6,11 +6,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
-	common := make(map[string]string)
+	// common is a map that stores key-value pairs, where the keys are of type string
+	// and the values are of type commonValue.
+	var common = make(map[string]string)
+	// commonValue represents a value in the common map, which consists of a string and an integer.
+
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
@@ -76,26 +81,37 @@ func handleConnection(conn net.Conn, common map[string]string) {
 					fmt.Println("Error writing data to connection: ", err.Error())
 				}
 			case "set":
-				if i+1 < len(commands) {
-					common[commands[i+1]] = commands[i+2]
-					_, err = conn.Write([]byte("+OK\r\n"))
-					if err != nil {
-						fmt.Println("Error writing data to connection: ", err.Error())
-					}
-					i += 2
-					break // Skip to the next iteration
+				common[commands[i+1]] = commands[i+2]
+
+				_, err = conn.Write([]byte("+OK\r\n"))
+				if err != nil {
+					fmt.Println("Error writing data to connection: ", err.Error())
 				}
+				i += 2
+				break // Skip to the next iteration
 			case "get":
-				if i+1 < len(commands) {
-					response := "+" + common[commands[i+1]] + "\r\n"
+				if val, ok := common[commands[i+1]]; ok {
+					response := "+" + val + "\r\n"
 					i++
 					_, err = conn.Write([]byte(response))
 					if err != nil {
 						fmt.Println("Error writing data to connection: ", err.Error())
 					}
 					i++
-					break // Skip to the next iteration
+					break
+				} else {
+					_, err = conn.Write([]byte("$-1\r\n"))
+				} // Skip to the next iteration
+			case "px":
+				t, err := strconv.Atoi(commands[i+1])
+				if err != nil {
+					fmt.Println("Error converting string to integer: ", err.Error())
+					continue
 				}
+				go func(key string, t int) {
+					time.Sleep(time.Duration(t) * time.Millisecond)
+					delete(common, key)
+				}(commands[i-2], t)
 			case "echo":
 				if i+1 < len(commands) {
 					response := "+" + commands[i+1] + "\r\n"
